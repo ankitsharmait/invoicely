@@ -29,7 +29,7 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
     try {
-        await mongoose.connect("mongodb+srv://ankitsharmabela:c%40AjiCm2%21GbgmNf@cluster0.f7liary.mongodb.net/invoicely", {
+        await mongoose.connect(process.env.MONGODB_URI, {
             useNewUrlParser: true,
             useUnifiedTopology: true
         });
