@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+
+const API_URL = 'http://localhost:5000/api';
 
 function GenerateBill() {
   const [items, setItems] = useState([]);
@@ -8,10 +11,24 @@ function GenerateBill() {
   const [quantity, setQuantity] = useState('');
   const [billItems, setBillItems] = useState([]);
   const [toast, setToast] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const storedItems = JSON.parse(localStorage.getItem('items')) || [];
-    setItems(storedItems);
+    const fetchItems = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`${API_URL}/items`);
+        setItems(response.data);
+        setError('');
+      } catch (err) {
+        setError('Failed to load items. Please try again.');
+        console.error('Error fetching items:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchItems();
   }, []);
 
   const handleAddToBill = (item) => {
@@ -25,6 +42,29 @@ function GenerateBill() {
     setSearch('');
     setQuantity('');
     showToast('✅ Item added to bill!');
+  };
+
+  const handleCreateInvoice = async () => {
+    if (billItems.length === 0) {
+      alert('Please add items to the bill first.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await axios.post(`${API_URL}/invoices`, {
+        items: billItems
+      });
+      
+      showToast('✅ Invoice created successfully!');
+      setBillItems([]);
+      setError('');
+    } catch (err) {
+      setError('Failed to create invoice. Please try again.');
+      console.error('Error creating invoice:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const showToast = (message) => {
@@ -53,6 +93,12 @@ function GenerateBill() {
     <div className="flex flex-col items-center min-h-screen bg-gray-100 p-6">
       <h2 className="text-3xl font-bold text-gray-800 mb-8 print:hidden">🧾 Generate Bill</h2>
 
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 print:hidden">
+          {error}
+        </div>
+      )}
+
       {toast && (
         <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition duration-300 print:hidden">
           {toast}
@@ -66,6 +112,7 @@ function GenerateBill() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="border border-gray-300 rounded-lg p-3 w-full md:w-1/2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          disabled={loading}
         />
         <input
           type="number"
@@ -73,11 +120,14 @@ function GenerateBill() {
           value={quantity}
           onChange={(e) => setQuantity(e.target.value)}
           className="border border-gray-300 rounded-lg p-3 w-full md:w-1/2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          disabled={loading}
         />
       </div>
 
       <div className="w-full max-w-4xl mb-10 print:hidden">
-        {search.trim() !== '' ? (
+        {loading ? (
+          <p className="text-gray-500 text-center">Loading items...</p>
+        ) : search.trim() !== '' ? (
           items.filter((item) => item.name.toLowerCase().includes(search.toLowerCase())).length > 0 ? (
             items
               .filter((item) => item.name.toLowerCase().includes(search.toLowerCase()))
@@ -92,7 +142,8 @@ function GenerateBill() {
                   </div>
                   <button
                     onClick={() => handleAddToBill(item)}
-                    className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg font-semibold mt-2 md:mt-0"
+                    className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg font-semibold mt-2 md:mt-0 disabled:opacity-50"
+                    disabled={loading}
                   >
                     ➕ Add
                   </button>
@@ -143,14 +194,23 @@ function GenerateBill() {
       {/* Action Buttons */}
       <div className="mt-6 flex gap-4 print:hidden">
         <button
+          onClick={handleCreateInvoice}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg shadow transition duration-300 disabled:opacity-50"
+          disabled={loading || billItems.length === 0}
+        >
+          {loading ? 'Creating...' : '💾 Save Invoice'}
+        </button>
+        <button
           onClick={handleDownloadPDF}
-          className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg shadow transition duration-300"
+          className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg shadow transition duration-300 disabled:opacity-50"
+          disabled={loading || billItems.length === 0}
         >
           📥 Download PDF
         </button>
         <button
           onClick={() => window.print()}
-          className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg shadow transition duration-300"
+          className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg shadow transition duration-300 disabled:opacity-50"
+          disabled={loading || billItems.length === 0}
         >
           🖨 Print Invoice
         </button>

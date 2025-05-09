@@ -6,7 +6,7 @@ function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 p-6">
       <h1 className="text-5xl font-extrabold mb-16 text-gray-800 tracking-wider animate-pulse">
-        🌟  
+        🌟  Invoicely
       </h1>
 
       <div className="flex flex-col md:flex-row items-center gap-8">
